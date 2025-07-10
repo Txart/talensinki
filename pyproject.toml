@@ -1,0 +1,20 @@
+[project]
+name = "talensinki"
+version = "0.1.0"
+description = "chat with your local pdfs"
+readme = "README.md"
+authors = [{ name = "txart", email = "iurzainki@gmail.com" }]
+requires-python = ">=3.13"
+dependencies = [
+    "langchain>=0.3.26",
+    "pytest>=8.4.1",
+    "ty>=0.0.1a14",
+    "typer>=0.16.0",
+]
+
+[project.scripts]
+talensinki = "talensinki:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
