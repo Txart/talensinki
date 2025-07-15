@@ -19,7 +19,7 @@ from langgraph.graph import START, StateGraph, message
 
 import time
 
-from talensinki import config, checks
+from talensinki import config, checks, database
 
 # initialize typer app
 app = typer.Typer()
@@ -37,6 +37,17 @@ def info():
 @app.command()
 def checkhealth() -> None:
     checks.run_health_checks(console)
+
+
+@app.command()
+def sync_database() -> None:
+    print("TODO: Read pdfs in folder")
+    print(database.read_pdf_files_in_folder())
+    CONTINUE HERE
+    print("TODO: Read entries in database")
+    print(
+        "TODO: Compare pdfs with database. If any pdf not in database, update database. AND: if pdf not in directory anymore, remove entry from database."
+    )
 
 
 @app.command()
