@@ -41,10 +41,8 @@ def checkhealth() -> None:
 
 @app.command()
 def sync_database() -> None:
-    print("TODO: Read pdfs in folder")
-    print(database.read_pdf_files_in_folder())
-    CONTINUE HERE
-    print("TODO: Read entries in database")
+    print(database.get_pdf_files())
+    print("TODO: Query database by pdf file hashes")
     print(
         "TODO: Compare pdfs with database. If any pdf not in database, update database. AND: if pdf not in directory anymore, remove entry from database."
     )

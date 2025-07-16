@@ -6,6 +6,7 @@ from typing_extensions import TypedDict
 
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_ollama import OllamaEmbeddings, ChatOllama
+from langchain_chroma import Chroma
 from langchain_core.vectorstores import InMemoryVectorStore
 from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
@@ -43,6 +44,12 @@ embeddings = OllamaEmbeddings(
 )
 
 vector_store = InMemoryVectorStore.from_documents(pages, embedding=embeddings)
+# use chroma
+vector_store = Chroma(
+    collection_name="example_collection",
+    embedding_function=embeddings,
+    persist_directory="./data/vector_database/chroma_langchain_db",
+)
 
 # %% check similarity to query
 

@@ -1,3 +1,3 @@
 from pathlib import Path
 
-PDF_FOLDER = Path("./pdfs")
+PDF_FOLDER = Path("./data/pdfs")
