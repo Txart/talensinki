@@ -41,7 +41,18 @@ def checkhealth() -> None:
 
 @app.command()
 def sync_database() -> None:
-    print(database.get_pdf_files())
+    # get pdf filenames
+    pdf_list = database.get_pdf_files()
+    # compute file hash to save as a metadata and be able to check uniqueness later
+    print(database.calculate_file_hash(pdf_list[0]))
+
+    # create and/or get chroma database
+    db_client = database.initialize_chroma_database_client()
+    collection = database.get_or_create_database_collection(chroma_client=db_client)
+    vector_store = database.get_vector_store_from_client(chroma_client=db_client)
+    print(vector_store)
+
+    CONTINUE HERE: QUERY DB BY METADATA FOR EXISTENCE OF PDF DOCUMENTS
     print("TODO: Query database by pdf file hashes")
     print(
         "TODO: Compare pdfs with database. If any pdf not in database, update database. AND: if pdf not in directory anymore, remove entry from database."

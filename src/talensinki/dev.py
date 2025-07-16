@@ -45,11 +45,6 @@ embeddings = OllamaEmbeddings(
 
 vector_store = InMemoryVectorStore.from_documents(pages, embedding=embeddings)
 # use chroma
-vector_store = Chroma(
-    collection_name="example_collection",
-    embedding_function=embeddings,
-    persist_directory="./data/vector_database/chroma_langchain_db",
-)
 
 # %% check similarity to query
 
