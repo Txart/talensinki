@@ -78,8 +78,8 @@ single_doc = retrieved_docs["context"][1]
 query = prompt_template.format_messages(question=question, context=single_doc)
 
 llm = ChatOllama(
-    model="llama3",
-    temperature=0.8,
+    model="llama3.2:1b",
+    temperature=0.1,
     num_predict=256,
 )
 
