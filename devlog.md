@@ -1,8 +1,4 @@
 # Now
-Keep working in the database:
-- clean main.py API
-- prompt for adding new embeddings or deleting old ones
-- Implement deletion from database.
 
 # Parse pdfs better
 - Exploit some of the structure in the pdf (sections, tables, etc.), follow very good instructions here: https://python.langchain.com/docs/how_to/document_loader_pdf/#simple-and-fast-text-extraction
@@ -14,5 +10,4 @@ Keep working in the database:
 
 
 # Improve UI
-- Rich-ify print statements 
 

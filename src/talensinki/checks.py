@@ -9,7 +9,8 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from dataclasses import dataclass
 from pathlib import Path
 
-from talensinki import config
+from talensinki import config, rich_display
+from talensinki.console import console
 
 
 @dataclass
@@ -19,13 +20,13 @@ class HealthCheckResult:
     details: str = ""
 
 
-def run_health_checks(console: Console) -> None:
+def run_health_checks() -> None:
     """
     Run all health checks and display results.
     """
     check_results = _run_checks()
 
-    _display_health_checks(console=console, check_results=check_results)
+    _display_health_checks(check_results=check_results)
 
 
 def _run_checks() -> list[HealthCheckResult]:
@@ -36,11 +37,7 @@ def _run_checks() -> list[HealthCheckResult]:
     ]
 
 
-def _display_health_checks(
-    console: Console, check_results: list[HealthCheckResult]
-) -> None:
-    console.print("\n[bold blue]Health Check Results[/bold blue]")
-
+def _display_health_checks(check_results: list[HealthCheckResult]) -> None:
     # Create a table for the results
     table = Table(show_header=True, header_style="bold magenta")
     table.add_column("Status", style="", width=8)
@@ -69,7 +66,7 @@ def _display_health_checks(
 
     # Summary panel
     if all_passed:
-        summary_text = "[bold green]✅ All health checks passed![/bold green]"
+        rich_display.print_success("All health checks passed!")
         panel_style = "green"
     else:
         summary_text = "[bold red]❌ Some health checks failed![/bold red]"

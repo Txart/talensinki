@@ -4,6 +4,7 @@ from typing import Any
 from uuid import uuid4
 from rich.progress import track
 from rich import print
+import typer
 
 from langchain_ollama import OllamaEmbeddings
 from langchain_chroma import Chroma
@@ -13,14 +14,11 @@ import chromadb
 from chromadb.api import ClientAPI
 from chromadb import Collection
 
-from talensinki import config
+from talensinki import config, rich_display
+from talensinki.console import console
 
 
-def get_pdf_filepaths_in_folder() -> list[Path]:
-    return _get_pdf_files_in_folder(folder=config.PDF_FOLDER)
-
-
-def _get_pdf_files_in_folder(folder: Path) -> list[Path]:
+def get_pdf_filepaths_in_folder(folder: Path) -> list[Path]:
     return [pdf_file for pdf_file in folder.glob("*.pdf")]
 
 
@@ -45,18 +43,22 @@ def get_or_create_database_collection(chroma_client: ClientAPI) -> Collection:
         collection = chroma_client.get_collection(
             name=config.VECTOR_DATABASE_COLLECTION_NAME
         )
-        print(
+        console.print(
             f"Fetched the collection {config.VECTOR_DATABASE_COLLECTION_NAME} from the database"
         )
 
     except Exception as e:
-        print(f"The collection was not found or could not be opened (exception: {e})")
-        print(f"Creating a new collection at {config.VECTOR_DATABASE_FILEPATH}...")
+        console.print(
+            f"The collection was not found or could not be opened (exception: {e})"
+        )
+        console.print(
+            f"Creating a new collection at {config.VECTOR_DATABASE_FILEPATH}..."
+        )
 
         collection = chroma_client.create_collection(
             name=config.VECTOR_DATABASE_COLLECTION_NAME,
         )
-        print("New collection created!")
+        console.print("New collection created!")
 
     return collection
 
@@ -123,7 +125,8 @@ def embed_pdfs_to_database(
     vector_store: Chroma, chunks_for_all_pdfs: list[list[Document]]
 ) -> None:
     for chunks_for_single_pdf in track(
-        chunks_for_all_pdfs, description="Embedding pdfs into the database..."
+        chunks_for_all_pdfs,
+        description=f"Embedding pdfs into the database using the {config.OLLAMA_EMBEDDING_MODEL} embedding model...",
     ):
         # each chunk needs to have a different id in the database
         uuids = [str(uuid4()) for _ in range(len(chunks_for_single_pdf))]
@@ -131,7 +134,7 @@ def embed_pdfs_to_database(
             documents=chunks_for_single_pdf,
             ids=uuids,
         )
-    print("Embedded all new pdfs.")
+    console.print("Embedded all new pdfs.")
     return None
 
 
@@ -145,18 +148,141 @@ def add_pdfs_to_database(vector_store: Chroma, pdf_paths: list[Path]) -> None:
     return None
 
 
-def get_pdf_hashes_in_database(vector_store: Chroma) -> set[str]:
-    docs_ids_and_metadatas = vector_store.get(include=["metadatas"])
+def delete_entries_from_database(vector_store: Chroma, ids: list[str]) -> None:
+    vector_store.delete(ids=ids)
+    return None
 
-    return set(
-        (
-            metadata["source_pdf_hash"]
-            for metadata in docs_ids_and_metadatas["metadatas"]
-        )
-    )
+
+def get_item_id_and_metadata_from_database(vector_store: Chroma) -> tuple[list, list]:
+    # gets all items from database
+    docs_ids_and_metadatas = vector_store.get(include=["metadatas"])
+    docs_ids = docs_ids_and_metadatas["ids"]
+    docs_metadatas = docs_ids_and_metadatas["metadatas"]
+    return docs_ids, docs_metadatas
+
+
+def get_pdf_hashes_in_database(vector_store: Chroma) -> tuple[str]:
+    # gets all items from database
+    ids, metadatas = get_item_id_and_metadata_from_database(vector_store)
+    return tuple(metadata["source_pdf_hash"] for metadata in metadatas)
 
 
 def does_pdf_exist_in_database(vector_store: Chroma, pdf_file_hash: str) -> bool:
     """Check if documents with the given PDF hash already exist"""
     existing_docs = vector_store.get(where={"source_pdf_hash": pdf_file_hash})
     return len(existing_docs["ids"]) > 0
+
+
+def get_hashes_of_files_in_folder_but_not_in_database(
+    hash_to_path_dict: dict, hashes_in_database: tuple
+) -> tuple[str]:
+    return tuple(set(hash_to_path_dict.keys()).difference(set(hashes_in_database)))
+
+
+def get_hashes_of_files_in_database_but_not_in_folder(
+    hash_to_path_dict: dict, hashes_in_database: tuple
+) -> tuple[str]:
+    return tuple(set(hashes_in_database).difference(set(hash_to_path_dict.keys())))
+
+
+def get_ids_of_entries_with_specific_hashes(
+    vector_store: Chroma, hashes: tuple[str, ...]
+) -> list[str]:
+    docs_ids, docs_metadatas = get_item_id_and_metadata_from_database(
+        vector_store=vector_store
+    )
+    docs_ids_with_hash = []
+    for doc_id, doc_metadata in zip(docs_ids, docs_metadatas):
+        if doc_metadata["source_pdf_hash"] in hashes:
+            docs_ids_with_hash.append(doc_id)
+    return docs_ids_with_hash
+
+
+def check_sync_status_between_folder_and_database(
+    vector_store: Chroma, pdf_folder: Path
+) -> tuple[list[Path], list[str]]:
+    """
+    Returns:
+    - New files not in database, i.e., file paths of pdfs in folder but not in database
+    - Files removed from folder but not from database, i.e., ids of entries in database corresponding to files that are no longer pdf folder
+    """
+    pdf_filepaths = get_pdf_filepaths_in_folder(folder=pdf_folder)
+    # compute folder file hash to save as a metadata and be able to check uniqueness later
+    hash_to_path_dict = {
+        calculate_file_hash(file_path=pdf_path): pdf_path for pdf_path in pdf_filepaths
+    }
+
+    hashes_in_database = get_pdf_hashes_in_database(vector_store=vector_store)
+
+    new_pdf_hashes_in_folder = get_hashes_of_files_in_folder_but_not_in_database(
+        hash_to_path_dict=hash_to_path_dict, hashes_in_database=hashes_in_database
+    )
+
+    database_hashes_corresponding_to_removed_pdfs = (
+        get_hashes_of_files_in_database_but_not_in_folder(
+            hash_to_path_dict=hash_to_path_dict, hashes_in_database=hashes_in_database
+        )
+    )
+
+    new_pdf_paths = [
+        hash_to_path_dict[new_pdf_hash] for new_pdf_hash in new_pdf_hashes_in_folder
+    ]
+
+    old_database_entry_ids = get_ids_of_entries_with_specific_hashes(
+        vector_store=vector_store, hashes=database_hashes_corresponding_to_removed_pdfs
+    )
+
+    return new_pdf_paths, old_database_entry_ids
+
+
+def sync_database_and_folder() -> None:
+    # create and/or get chroma database
+    db_client = initialize_chroma_database_client()
+
+    # get database collection. If it does not exist, create it.
+    # This is used to make sure that the database exists.
+    _ = get_or_create_database_collection(chroma_client=db_client)
+
+    # The vector store, not the collection, is what is used later
+    vector_store = get_vector_store_from_client(chroma_client=db_client)
+
+    pdf_paths_to_add, entry_ids_to_remove = (
+        check_sync_status_between_folder_and_database(
+            vector_store=vector_store, pdf_folder=config.PDF_FOLDER
+        )
+    )
+
+    number_of_new_pdfs_in_folder = len(pdf_paths_to_add)
+    number_of_unsynced_db_entries = len(entry_ids_to_remove)
+
+    if number_of_new_pdfs_in_folder > 0:
+        console.print(
+            f"I detected {number_of_new_pdfs_in_folder} new pdfs that are not yet embedded in the database:"
+        )
+        console.print(pdf_paths_to_add)
+        should_add = typer.confirm("Do you want to create their embeddings now?")
+        if should_add:
+            add_pdfs_to_database(
+                vector_store=vector_store,
+                pdf_paths=pdf_paths_to_add,
+            )
+    else:
+        console.print("No new pdf files detected.")
+    if number_of_unsynced_db_entries > 0:
+        console.print(
+            f"I detected {number_of_unsynced_db_entries} pdf chunks in the database that do not correspond to any pdf file."
+        )
+
+        should_delete = typer.confirm(
+            "Do you want to remove them from the database now?"
+        )
+        if should_delete:
+            console.print("I will delete them from the database now.")
+            delete_entries_from_database(
+                vector_store=vector_store, ids=entry_ids_to_remove
+            )
+    else:
+        console.print(
+            "I did not detect any database entry without a corresponding pdf file."
+        )
+    rich_display.print_success("Database and folder file are in sync")
