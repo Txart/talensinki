@@ -1,6 +1,9 @@
 from pathlib import Path
 import hashlib
 from typing import Any
+from uuid import uuid4
+from rich.progress import track
+from rich import print
 
 from langchain_ollama import OllamaEmbeddings
 from langchain_chroma import Chroma
@@ -13,7 +16,7 @@ from chromadb import Collection
 from talensinki import config
 
 
-def get_pdf_files() -> list[Path]:
+def get_pdf_filepaths_in_folder() -> list[Path]:
     return _get_pdf_files_in_folder(folder=config.PDF_FOLDER)
 
 
@@ -63,17 +66,13 @@ def get_vector_store_from_client(chroma_client: ClientAPI) -> Chroma:
         client=chroma_client,
         collection_name=config.VECTOR_DATABASE_COLLECTION_NAME,
         embedding_function=OllamaEmbeddings(
-            model="nomic-embed-text",
+            model=config.OLLAMA_EMBEDDING_MODEL,
             base_url=config.OLLAMA_LOCAL_URL,
         ),
     )
 
 
-def query_database():
-    return collection.query(where={"file_hash": file_hash}, limit=1)
-
-
-def load_single_pdf_pages(pdf_path: Path):
+def chunk_pdf_by_pages(pdf_path: Path) -> list[Document]:
     loader = PyPDFLoader(str(pdf_path))
     pages = []
     for page in loader.lazy_load():
@@ -91,6 +90,69 @@ def assign_source_pdf_metadata_info_to_document(
             "source_pdf_hash": source_pdf_hash,
             **doc.metadata,  # This preserves existing metadata
         },
+    )
+
+
+def chunk_pdfs_with_metadata(
+    pdf_paths: list[Path], chunk_mode: str
+) -> list[list[Document]]:
+    match chunk_mode:
+        case "by_pages":
+            chunking_function = chunk_pdf_by_pages
+        case _:
+            raise NotImplementedError(
+                "The selected PDF chunking mode is not implemented."
+            )
+    chunks_with_metadata = []
+    for pdf_path in pdf_paths:
+        pdf_file_hash = calculate_file_hash(file_path=pdf_path)
+        pdf_chunks = chunking_function(pdf_path)
+        chunks_with_metadata.append(
+            [
+                assign_source_pdf_metadata_info_to_document(
+                    doc=pdf_chunk, source_pdf_hash=pdf_file_hash
+                )
+                for pdf_chunk in pdf_chunks
+            ]
+        )
+
+    return chunks_with_metadata
+
+
+def embed_pdfs_to_database(
+    vector_store: Chroma, chunks_for_all_pdfs: list[list[Document]]
+) -> None:
+    for chunks_for_single_pdf in track(
+        chunks_for_all_pdfs, description="Embedding pdfs into the database..."
+    ):
+        # each chunk needs to have a different id in the database
+        uuids = [str(uuid4()) for _ in range(len(chunks_for_single_pdf))]
+        vector_store.add_documents(
+            documents=chunks_for_single_pdf,
+            ids=uuids,
+        )
+    print("Embedded all new pdfs.")
+    return None
+
+
+def add_pdfs_to_database(vector_store: Chroma, pdf_paths: list[Path]) -> None:
+    chunks_for_all_pdfs = chunk_pdfs_with_metadata(
+        pdf_paths=pdf_paths, chunk_mode=config.PDF_CHUNKING_MODE
+    )
+    embed_pdfs_to_database(
+        vector_store=vector_store, chunks_for_all_pdfs=chunks_for_all_pdfs
+    )
+    return None
+
+
+def get_pdf_hashes_in_database(vector_store: Chroma) -> set[str]:
+    docs_ids_and_metadatas = vector_store.get(include=["metadatas"])
+
+    return set(
+        (
+            metadata["source_pdf_hash"]
+            for metadata in docs_ids_and_metadatas["metadatas"]
+        )
     )
 
 

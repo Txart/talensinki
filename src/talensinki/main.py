@@ -2,7 +2,6 @@
 from os import system
 from langchain import hub
 from pathlib import Path
-from uuid import uuid4
 
 import typer
 from rich import print
@@ -42,48 +41,74 @@ def checkhealth() -> None:
 
 @app.command()
 def sync_database() -> None:
-    PUT SOME API ORDER IN HERE!!
-    # get pdf filenames
-    pdf_list = database.get_pdf_files()
-
     # create and/or get chroma database
     db_client = database.initialize_chroma_database_client()
-    collection = database.get_or_create_database_collection(chroma_client=db_client)
+
+    # get database collection. If it does not exist, create it.
+    # This is used to make sure that the database exists.
+    database.get_or_create_database_collection(chroma_client=db_client)
+
+    # The vector store, not the collection, is what is used in langchain.
     vector_store = database.get_vector_store_from_client(chroma_client=db_client)
 
-    pages = database.load_single_pdf_pages(pdf_path=pdf_list[0])
+    # get pdf filenames
+    pdf_filepaths = database.get_pdf_filepaths_in_folder()
+
     # compute file hash to save as a metadata and be able to check uniqueness later
-    pdf_file_hash = database.calculate_file_hash(file_path=pdf_list[0])
-    pages_with_metadata = [
-        database.assign_source_pdf_metadata_info_to_document(
-            doc=page, source_pdf_hash=pdf_file_hash
+    hash_to_path_dict = {
+        database.calculate_file_hash(file_path=pdf_path): pdf_path
+        for pdf_path in pdf_filepaths
+    }
+
+    # get all items from database
+    hashes_in_database: set[str] = database.get_pdf_hashes_in_database(
+        vector_store=vector_store
+    )
+
+    # File hashes in folder but not in database
+    new_pdf_hashes_in_folder = set(hash_to_path_dict.keys()).difference(
+        hashes_in_database
+    )
+
+    # File hashes in database but not in folder
+    database_entries_corresponding_to_removed_pdfs = hashes_in_database.difference(
+        set(hash_to_path_dict.keys())
+    )
+
+    number_of_new_pdfs_in_folder = len(new_pdf_hashes_in_folder)
+    number_of_unsynced_db_entries = len(database_entries_corresponding_to_removed_pdfs)
+
+    if number_of_new_pdfs_in_folder > 0:
+        print(
+            f"I detected {number_of_new_pdfs_in_folder} new pdfs that are not yet embedded in the database:"
         )
-        for page in pages
-    ]
+        new_pdf_paths = [
+            hash_to_path_dict[new_pdf_hash] for new_pdf_hash in new_pdf_hashes_in_folder
+        ]
+        print(new_pdf_paths)
+        print("TODO: PROMPT FOR CONFIRMATION!")
+        print("I will add them to the database now.")
 
-    uuids = [str(uuid4()) for _ in range(len(pages_with_metadata))]
-    print("Embedding pdf 1...")
-    vector_store.add_documents(
-        documents=pages_with_metadata,
-        ids=uuids,
-    )
-    print("Embedded!")
+        database.add_pdfs_to_database(
+            vector_store=vector_store,
+            pdf_paths=new_pdf_paths,
+        )
+    else:
+        print("No new pdf files detected.")
+    if number_of_unsynced_db_entries > 0:
+        print(
+            f"I detected {number_of_unsynced_db_entries} new pdfs that are not yet embedded in the database."
+        )
+        print("I will delete them from the database now.")
 
-    print(vector_store)
-    # collection = database.get_or_create_database_collection(chroma_client=db_client)
-    # collection.query(where={"source_pdf_hash": pdf_file_hash})
-    is_pdf_in_database = database.does_pdf_exist_in_database(
-        vector_store=vector_store, pdf_file_hash=pdf_file_hash
-    )
-    if is_pdf_in_database:
-        print("PDF is already in database!")
-    elif not is_pdf_in_database:
-        print("This PDF is not in the database!")
+        print("TODO: PROMPT FOR CONFIRMATION!")
+        raise NotImplementedError("database deletion not implemented yet!")
+    else:
+        print("No unsynced database entries detected.")
 
-    print("TODO: Query database by pdf file hashes")
-    print(
-        "TODO: Compare pdfs with database. If any pdf not in database, update database. AND: if pdf not in directory anymore, remove entry from database."
-    )
+    print("TODO: if pdf not in directory anymore, remove entry from database.")
+
+    print(f"Database is synchronized with pdf folder {config.PDF_FOLDER}.")
 
 
 @app.command()
