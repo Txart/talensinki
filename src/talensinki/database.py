@@ -10,6 +10,8 @@ from langchain_ollama import OllamaEmbeddings
 from langchain_chroma import Chroma
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.schema import Document
+from langchain_unstructured import UnstructuredLoader
+from langchain_community.vectorstores.utils import filter_complex_metadata
 import chromadb
 from chromadb.api import ClientAPI
 from chromadb import Collection
@@ -95,18 +97,39 @@ def assign_source_pdf_metadata_info_to_document(
     )
 
 
+def chunk_pdf_by_sections(pdf_path: Path) -> list[Document]:
+    loader = UnstructuredLoader(
+        file_path=pdf_path, strategy="hi_res", languages=["eng"]
+    )
+
+    docs = []
+    for doc in loader.load():
+        docs.append(doc)
+
+    console.print("Leaving out complex metadata from the UnstructuredLoader...")
+    filtered_docs = filter_complex_metadata(docs)
+
+    return filtered_docs
+
+
 def chunk_pdfs_with_metadata(
     pdf_paths: list[Path], chunk_mode: str
 ) -> list[list[Document]]:
     match chunk_mode:
         case "by_pages":
             chunking_function = chunk_pdf_by_pages
+        case "unstructured":
+            chunking_function = chunk_pdf_by_sections
         case _:
             raise NotImplementedError(
                 "The selected PDF chunking mode is not implemented."
             )
     chunks_with_metadata = []
-    for pdf_path in pdf_paths:
+
+    for pdf_path in track(
+        pdf_paths,
+        description=f"Chunking the PDFs using the {config.PDF_CHUNKING_MODE} chunking mode...",
+    ):
         pdf_file_hash = calculate_file_hash(file_path=pdf_path)
         pdf_chunks = chunking_function(pdf_path)
         chunks_with_metadata.append(
@@ -235,7 +258,7 @@ def check_sync_status_between_folder_and_database(
     return new_pdf_paths, old_database_entry_ids
 
 
-def sync_database_and_folder() -> None:
+def init_and_get_vector_store() -> Chroma:
     # create and/or get chroma database
     db_client = initialize_chroma_database_client()
 
@@ -244,7 +267,11 @@ def sync_database_and_folder() -> None:
     _ = get_or_create_database_collection(chroma_client=db_client)
 
     # The vector store, not the collection, is what is used later
-    vector_store = get_vector_store_from_client(chroma_client=db_client)
+    return get_vector_store_from_client(chroma_client=db_client)
+
+
+def sync_database_and_folder() -> None:
+    vector_store: Chroma = init_and_get_vector_store()
 
     pdf_paths_to_add, entry_ids_to_remove = (
         check_sync_status_between_folder_and_database(

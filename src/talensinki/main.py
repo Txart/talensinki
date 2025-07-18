@@ -17,10 +17,12 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
 from langgraph.graph import START, StateGraph, message
+from langchain_unstructured import UnstructuredLoader
 
 import time
 
 from talensinki import config, checks, database, rich_display
+from talensinki.console import console
 
 # initialize typer app
 app = typer.Typer()
@@ -31,24 +33,36 @@ app = typer.Typer()
 
 @app.command()
 def info():
-    print("pdf folder path:", config.PDF_FOLDER)
+    console.print("pdf folder path:", config.PDF_FOLDER)
 
 
 @app.command()
 def checkhealth() -> None:
     rich_display.print_command_title("Health Check Results")
     checks.run_health_checks()
+    return None
 
 
 @app.command()
 def sync_database() -> None:
     rich_display.print_command_title("Syncing database")
     database.sync_database_and_folder()
+    return None
+
+
+def retrieve_docs(question: str) -> dict["str", list[Document]]:
+    vector_store = database.init_and_get_vector_store()
+    retrieved_docs = vector_store.similarity_search(query=question)
+    return {"context": retrieved_docs}
 
 
 @app.command()
 def run():
     print("Talensinki app starting...")
+    loader_local = UnstructuredLoader(
+        file_path=file_path,
+        strategy="hi_res",
+    )
 
     # Your RAG setup will go here
 
@@ -59,3 +73,4 @@ def run():
             time.sleep(1)
     except KeyboardInterrupt:
         print("Shutting down...")
+    return None
