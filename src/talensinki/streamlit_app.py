@@ -1,8 +1,4 @@
-from os import sync
-from altair.vegalite import data
-import click
 import streamlit as st
-import time
 
 from talensinki import database, config
 

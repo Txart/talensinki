@@ -1,9 +1,6 @@
 import typer
 
-from rich.console import Console
 from rich.table import Table
-from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn
 
 
 from dataclasses import dataclass
@@ -67,12 +64,8 @@ def _display_health_checks(check_results: list[HealthCheckResult]) -> None:
     # Summary panel
     if all_passed:
         rich_display.print_success("All health checks passed!")
-        panel_style = "green"
     else:
-        summary_text = "[bold red]❌ Some health checks failed![/bold red]"
-        panel_style = "red"
-
-    console.print(Panel(summary_text, style=panel_style, padding=(1, 2)))
+        rich_display.print_failure("Some health checks failed!")
 
     if not all_passed:
         raise typer.Exit(1)  # Exit with error code

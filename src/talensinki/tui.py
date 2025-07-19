@@ -1,22 +1,10 @@
 # %%
-from os import system
-from langchain import hub
-from pathlib import Path
-from typing_extensions import Annotated
 
 import typer
 from rich import print
-from rich.console import Console
 
 
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_ollama import OllamaEmbeddings, ChatOllama
-from langchain_core.vectorstores import InMemoryVectorStore
-from langchain.chains import create_retrieval_chain
-from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
-from langgraph.graph import START, StateGraph, message
 
 import time
 

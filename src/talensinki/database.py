@@ -88,9 +88,7 @@ def embed_pdfs_to_database(
 
 
 def add_pdfs_to_database(vector_store: Chroma, pdf_paths: list[Path]) -> None:
-    chunks_for_all_pdfs = pdf_chunking.chunk_pdfs_with_metadata(
-        pdf_paths=pdf_paths, chunker_function=config.PDF_CHUNKING_FUNCTION
-    )
+    chunks_for_all_pdfs = pdf_chunking.chunk_pdfs_with_metadata(pdf_paths=pdf_paths)
     embed_pdfs_to_database(
         vector_store=vector_store, chunks_for_all_pdfs=chunks_for_all_pdfs
     )
@@ -145,38 +143,6 @@ def get_ids_of_entries_with_specific_hashes(
         if doc_metadata["source_pdf_hash"] in hashes:
             docs_ids_with_hash.append(doc_id)
     return docs_ids_with_hash
-
-
-def chunk_pdfs_with_metadata(
-    pdf_paths: list[Path], chunk_mode: str
-) -> list[list[Document]]:
-    match chunk_mode:
-        case "by_pages":
-            chunking_function = chunk_pdf_by_pages
-        case "unstructured":
-            chunking_function = chunk_pdf_by_sections
-        case _:
-            raise NotImplementedError(
-                "The selected PDF chunking mode is not implemented."
-            )
-    chunks_with_metadata = []
-
-    for pdf_path in track(
-        pdf_paths,
-        description=f"Chunking the PDFs using the {config.PDF_CHUNKING_FUNCTION} chunking mode...",
-    ):
-        pdf_file_hash = database.calculate_file_hash(file_path=pdf_path)
-        pdf_chunks = chunking_function(pdf_path)
-        chunks_with_metadata.append(
-            [
-                assign_source_pdf_metadata_info_to_document(
-                    doc=pdf_chunk, source_pdf_hash=pdf_file_hash
-                )
-                for pdf_chunk in pdf_chunks
-            ]
-        )
-
-    return chunks_with_metadata
 
 
 def check_sync_status_between_folder_and_database(

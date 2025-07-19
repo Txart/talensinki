@@ -59,17 +59,15 @@ def chunk_pdf_by_sections(pdf_path: Path) -> list[Document]:
     return filtered_docs
 
 
-def chunk_pdfs_with_metadata(
-    pdf_paths: list[Path], chunker_function: PDFChunker
-) -> list[list[Document]]:
+def chunk_pdfs_with_metadata(pdf_paths: list[Path]) -> list[list[Document]]:
     chunks_with_metadata = []
 
     for pdf_path in track(
         pdf_paths,
-        description=f"Chunking the PDFs using the {config.PDF_CHUNKING_FUNCTION} chunking function...",
+        description=f"Chunking the PDFs using the {config.PDF_CHUNKING_METHOD} chunking function...",
     ):
         pdf_file_hash = database.calculate_file_hash(file_path=pdf_path)
-        pdf_chunks = chunker_function(pdf_path)
+        pdf_chunks = AVAILABLE_PDF_CHUNKERS[config.PDF_CHUNKING_METHOD](pdf_path)
         chunks_with_metadata.append(
             [
                 assign_source_pdf_metadata_info_to_document(
@@ -99,11 +97,3 @@ CHUNKER_METADATA = {
         "function": chunk_pdf_by_sections,
     },
 }
-
-
-def get_chunker(name: str) -> PDFChunker:
-    """Get a chunker by name from configuration."""
-    if name not in AVAILABLE_PDF_CHUNKERS:
-        available = list(AVAILABLE_PDF_CHUNKERS.keys())
-        raise ValueError(f"Unknown chunker '{name}'. Available: {available}")
-    return AVAILABLE_PDF_CHUNKERS[name]
