@@ -12,14 +12,18 @@ dependencies = [
     "langchain-chroma>=0.2.4",
     "langchain-community>=0.3.27",
     "langchain-ollama>=0.3.4",
+    "langchain-unstructured>=0.1.5",
     "langgraph>=0.5.2",
     "pypdf>=5.8.0",
     "pytest>=8.4.1",
+    "streamlit>=1.47.0",
     "typer>=0.16.0",
+    "unstructured[pdf]>=0.18.9",
 ]
 
 [project.scripts]
-talensinki = "talensinki.main:app"
+talensinki = "talensinki.tui:app"
+talensinki-gui = "talensinki.gui:main"
 
 [build-system]
 requires = ["hatchling"]

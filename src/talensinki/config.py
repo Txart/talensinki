@@ -7,4 +7,4 @@ VECTOR_DATABASE_COLLECTION_NAME = "PDF_collection"
 
 OLLAMA_EMBEDDING_MODEL = "nomic-embed-text"
 
-PDF_CHUNKING_MODE = "unstructured"  # options: by_pages, unstructured
+PDF_CHUNKING_MODE = "by_pages"  # options: by_pages, unstructured
