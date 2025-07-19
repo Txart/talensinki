@@ -46,7 +46,13 @@ def assign_source_pdf_metadata_info_to_document(
 
 def chunk_pdf_by_sections(pdf_path: Path) -> list[Document]:
     loader = UnstructuredLoader(
-        file_path=pdf_path, strategy="hi_res", languages=["eng"]
+        file_path=pdf_path,
+        strategy="hi_res",
+        languages=["eng"],
+        chunking_strategy="by_title",
+        max_characters=1500,
+        new_after_n_chars=1000,
+        overlap=100,
     )
 
     docs = []
