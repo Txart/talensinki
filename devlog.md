@@ -36,3 +36,6 @@ sudo apt install tesseract-ocr
 1. Index pdf documents:
     - load, split -> unstructured pdf maybe too much: not needed?
     - embeddings -> Ollama + chroma
+
+# Preguntas Clara
+- Vas a necesitar buscar en un subconjunto de los archivos? Ejemplo: buscar en todos los archivos creados después de 2010.

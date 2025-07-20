@@ -8,11 +8,11 @@ from langchain_core.documents import Document
 
 import time
 
-from talensinki import config, checks, database, rich_display
+from talensinki import config, checks, database, rich_display, llm
 from talensinki.console import console
 
 # initialize typer app
-app = typer.Typer()
+app = typer.Typer(invoke_without_command=True)
 
 
 # %% app
@@ -79,14 +79,14 @@ def sync_database() -> None:
     return None
 
 
-def retrieve_docs(question: str) -> dict["str", list[Document]]:
-    vector_store = database.init_and_get_vector_store()
-    retrieved_docs = vector_store.similarity_search(query=question)
-    return {"context": retrieved_docs}
-
-
 @app.command()
-def run():
+def ask(question: str) -> None:
+    answer = llm.ask_question(question=question)
+    console.print(answer)
+    return None
+
+
+def run_by_default() -> None:
     print("Talensinki app starting...")
 
     # Your RAG setup will go here
@@ -98,4 +98,15 @@ def run():
             time.sleep(1)
     except KeyboardInterrupt:
         print("Shutting down...")
+
+
+@app.callback()
+def main(context: typer.Context) -> None:
+    """
+    Ask some qusetion about your pdfs!
+    """
+    # Main function that runs when no subcommand is specified.
+    if context.invoked_subcommand is None:
+        # This code runs when no subcommand is provided
+        run_by_default()
     return None

@@ -10,3 +10,6 @@ OLLAMA_EMBEDDING_MODEL = "nomic-embed-text"
 PDF_CHUNKING_METHOD = (
     "by_sections"  # Check pdf_chunking.AVAILABLE_CHUNKING_METHODS for a complete list
 )
+
+OLLAMA_LLM_MODEL = "llama3.2:1b"
+# OLLAMA_LLM_MODEL = "llama3:latest"

@@ -1,6 +1,6 @@
 import streamlit as st
 
-from talensinki import database, config
+from talensinki import database, config, llm
 
 
 def initialize_session_state() -> None:
@@ -10,6 +10,8 @@ def initialize_session_state() -> None:
         st.session_state.pdf_paths_to_add = []
     if "entry_ids_to_remove" not in st.session_state:
         st.session_state.entry_ids_to_remove = []
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
 
 def database_sync_button() -> None:
@@ -73,11 +75,38 @@ def sync_database_UI() -> None:
                     st.rerun()
 
 
+def chat_area():
+    st.title("Chat area")
+
+    # Display chat messages from history on app rerun
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    question = st.chat_input(placeholder="your question about the pdfs")
+
+    if question:
+        with st.chat_message("human"):
+            st.markdown(question)
+
+        st.session_state.messages.append({"role": "user", "content": question})
+
+        with st.spinner("generating response..."):
+            answer = llm.ask_question(question=question)
+
+        with st.chat_message("ai"):
+            st.markdown(answer)
+
+
 st.title("Talensinki GUI")
 
 initialize_session_state()
+
 
 database_sync_button()
 
 if st.session_state.sync_checked:
     sync_database_UI()
+
+st.divider()
+chat_area()
