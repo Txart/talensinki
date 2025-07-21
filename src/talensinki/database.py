@@ -59,23 +59,27 @@ def get_or_create_database_collection(chroma_client: ClientAPI) -> Collection:
     return collection
 
 
-def get_vector_store_from_client(chroma_client: ClientAPI) -> Chroma:
+def get_vector_store_from_client(
+    chroma_client: ClientAPI, params: config.Params
+) -> Chroma:
     return Chroma(
         client=chroma_client,
         collection_name=config.VECTOR_DATABASE_COLLECTION_NAME,
         embedding_function=OllamaEmbeddings(
-            model=config.OLLAMA_EMBEDDING_MODEL,
+            model=params.ollama_embedding_model,
             base_url=config.OLLAMA_LOCAL_URL,
         ),
     )
 
 
 def embed_pdfs_to_database(
-    vector_store: Chroma, chunks_for_all_pdfs: list[list[Document]]
+    vector_store: Chroma,
+    chunks_for_all_pdfs: list[list[Document]],
+    params: config.Params,
 ) -> None:
     for chunks_for_single_pdf in track(
         chunks_for_all_pdfs,
-        description=f"Embedding pdfs into the database using the {config.OLLAMA_EMBEDDING_MODEL} embedding model...",
+        description=f"Embedding pdfs into the database using the {params.ollama_embedding_model} embedding model...",
     ):
         # each chunk needs to have a different id in the database
         uuids = [str(uuid4()) for _ in range(len(chunks_for_single_pdf))]
@@ -87,10 +91,16 @@ def embed_pdfs_to_database(
     return None
 
 
-def add_pdfs_to_database(vector_store: Chroma, pdf_paths: list[Path]) -> None:
-    chunks_for_all_pdfs = pdf_chunking.chunk_pdfs_with_metadata(pdf_paths=pdf_paths)
+def add_pdfs_to_database(
+    vector_store: Chroma, pdf_paths: list[Path], params: config.Params
+) -> None:
+    chunks_for_all_pdfs = pdf_chunking.chunk_pdfs_with_metadata(
+        pdf_paths=pdf_paths, params=params
+    )
     embed_pdfs_to_database(
-        vector_store=vector_store, chunks_for_all_pdfs=chunks_for_all_pdfs
+        vector_store=vector_store,
+        chunks_for_all_pdfs=chunks_for_all_pdfs,
+        params=params,
     )
     return None
 
@@ -182,7 +192,7 @@ def check_sync_status_between_folder_and_database(
     return new_pdf_paths, old_database_entry_ids
 
 
-def init_and_get_vector_store() -> Chroma:
+def init_and_get_vector_store(params: config.Params) -> Chroma:
     # create and/or get chroma database
     db_client = initialize_chroma_database_client()
 
@@ -191,4 +201,4 @@ def init_and_get_vector_store() -> Chroma:
     _ = get_or_create_database_collection(chroma_client=db_client)
 
     # The vector store, not the collection, is what is used later
-    return get_vector_store_from_client(chroma_client=db_client)
+    return get_vector_store_from_client(chroma_client=db_client, params=params)

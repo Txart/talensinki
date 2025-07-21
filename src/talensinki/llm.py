@@ -16,18 +16,16 @@ class State(TypedDict):
     answer: str
 
 
-def create_chat_object() -> ChatOllama:
+def create_chat_object(params: config.Params) -> ChatOllama:
     return ChatOllama(
-        model=config.OLLAMA_LLM_MODEL,
+        model=params.ollama_llm_model,
         temperature=0.01,
         num_predict=256,
     )
 
 
-def retrieve(
-    state: State,
-) -> dict[str, list[Document]]:
-    vector_store = database.init_and_get_vector_store()
+def retrieve(state: State, params: config.Params) -> dict[str, list[Document]]:
+    vector_store = database.init_and_get_vector_store(params=params)
 
     retrieved_docs = retrieve_docs_by_similarity_search(
         state, vector_store, number_of_docs_to_retrieve=5
@@ -50,9 +48,9 @@ def combine_document_contents(state: State) -> str:
     return "\n\n".join(doc.page_content for doc in state["context"])
 
 
-def generate(state: State):
+def generate(state: State, params: config.Params):
     docs_content = combine_document_contents(state)
-    llm = create_chat_object()
+    llm = create_chat_object(params=params)
     messages = templates.SYSTEM_PROMPT.invoke(
         {"question": state["question"], "context": docs_content}
     )
@@ -60,8 +58,13 @@ def generate(state: State):
     return {"answer": response.content}
 
 
-def build_graph():
-    graph_builder = StateGraph(State).add_sequence([retrieve, generate])
+def build_graph(params: config.Params):
+    graph_builder = StateGraph(State).add_sequence(
+        [
+            ("retrieve", lambda state: retrieve(state, params=params)),
+            ("generate", lambda state: generate(state, params=params)),
+        ]
+    )
     graph_builder.add_edge(START, "retrieve")
     graph = graph_builder.compile()
     return graph
@@ -73,9 +76,9 @@ def save_graph_image(graph, filepath=Path("output/graph.png")) -> None:
         f.write(png_data)
 
 
-def ask_question(question: str) -> str:
+def ask_question(question: str, params: config.Params) -> str:
     state = State(question=question, context=[], answer="")
-    graph = build_graph()
+    graph = build_graph(params=params)
     result = graph.invoke(state)
 
     return result["answer"]

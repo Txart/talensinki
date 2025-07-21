@@ -14,12 +14,12 @@ def initialize_session_state() -> None:
         st.session_state.messages = []
 
 
-def database_sync_button() -> None:
+def database_sync_button(params: config.Params) -> None:
     if st.button("Check Database Synchronization", type="primary"):
         with st.spinner("Checking synchronization status..."):
             pdf_paths_to_add, entry_ids_to_remove = (
                 database.check_sync_status_between_folder_and_database(
-                    vector_store=database.init_and_get_vector_store(),
+                    vector_store=database.init_and_get_vector_store(params=params),
                     pdf_folder=config.PDF_FOLDER,
                 )
             )
@@ -30,7 +30,7 @@ def database_sync_button() -> None:
         st.rerun()
 
 
-def sync_database_UI() -> None:
+def sync_database_UI(params: config.Params) -> None:
     if (
         len(st.session_state.pdf_paths_to_add) == 0
         and len(st.session_state.entry_ids_to_remove) == 0
@@ -57,8 +57,11 @@ def sync_database_UI() -> None:
                 if st.button("🚀 Embed PDFs"):
                     with st.spinner("Embedding PDFs..."):
                         database.add_pdfs_to_database(
-                            vector_store=database.init_and_get_vector_store(),
+                            vector_store=database.init_and_get_vector_store(
+                                params=params
+                            ),
                             pdf_paths=st.session_state.pdf_paths_to_add,
+                            params=params,
                         )
                     st.session_state.pdf_paths_to_add = []
                     st.rerun()
@@ -68,14 +71,16 @@ def sync_database_UI() -> None:
                 if st.button("🗑️ Remove Entries"):
                     with st.spinner("Removing entries..."):
                         database.delete_entries_from_database(
-                            vector_store=database.init_and_get_vector_store(),
+                            vector_store=database.init_and_get_vector_store(
+                                params=params
+                            ),
                             ids=st.session_state.entry_ids_to_remove,
                         )
                     st.session_state.entry_ids_to_remove = []
                     st.rerun()
 
 
-def chat_area():
+def chat_area(params: config.Params):
     st.title("Chat without memory")
     st.info(
         "No memory is retained between succesive calls to the LLM. Each new question goes in without any previous context about the ongoing conversation.",
@@ -95,8 +100,8 @@ def chat_area():
 
         st.session_state.messages.append({"role": "human", "content": question})
 
-        with st.spinner("generating response..."):
-            answer = llm.ask_question(question=question)
+        with st.spinner(f"generating response with model {params.ollama_llm_model}..."):
+            answer = llm.ask_question(question=question, params=params)
 
         with st.chat_message("ai"):
             st.markdown(answer)
@@ -106,13 +111,21 @@ def chat_area():
 
 st.title("Talensinki GUI")
 
+llm_model = st.selectbox(
+    "Select LLM model",
+    ("llama3:latest", "llama3.2:1b"),
+)
+
+params = config.Params(ollama_llm_model=llm_model)
 initialize_session_state()
 
+st.divider()
 
-database_sync_button()
+database_sync_button(params=params)
+
 
 if st.session_state.sync_checked:
-    sync_database_UI()
+    sync_database_UI(params=params)
 
 st.divider()
-chat_area()
+chat_area(params)

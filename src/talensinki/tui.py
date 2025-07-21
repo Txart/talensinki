@@ -81,7 +81,8 @@ def sync_database() -> None:
 
 @app.command()
 def ask(question: str) -> None:
-    answer = llm.ask_question(question=question)
+    params = config.Params()
+    answer = llm.ask_question(question=question, params=params)
     console.print(answer)
     return None
 

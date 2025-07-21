@@ -65,15 +65,17 @@ def chunk_pdf_by_sections(pdf_path: Path) -> list[Document]:
     return filtered_docs
 
 
-def chunk_pdfs_with_metadata(pdf_paths: list[Path]) -> list[list[Document]]:
+def chunk_pdfs_with_metadata(
+    pdf_paths: list[Path], params: config.Params
+) -> list[list[Document]]:
     chunks_with_metadata = []
 
     for pdf_path in track(
         pdf_paths,
-        description=f"Chunking the PDFs using the {config.PDF_CHUNKING_METHOD} chunking function...",
+        description=f"Chunking the PDFs using the {params.pdf_chunking_method} chunking function...",
     ):
         pdf_file_hash = database.calculate_file_hash(file_path=pdf_path)
-        pdf_chunks = AVAILABLE_PDF_CHUNKERS[config.PDF_CHUNKING_METHOD](pdf_path)
+        pdf_chunks = AVAILABLE_PDF_CHUNKERS[params.pdf_chunking_method](pdf_path)
         chunks_with_metadata.append(
             [
                 assign_source_pdf_metadata_info_to_document(

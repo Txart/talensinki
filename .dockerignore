@@ -52,6 +52,9 @@ docker-compose.yml
 # Data
 data/
 
+# Bureaucracy
+bureaucracy/
+
 # Test files
 tests/
 test_*.py
