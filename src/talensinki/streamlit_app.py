@@ -76,7 +76,11 @@ def sync_database_UI() -> None:
 
 
 def chat_area():
-    st.title("Chat area")
+    st.title("Chat without memory")
+    st.info(
+        "No memory is retained between succesive calls to the LLM. Each new question goes in without any previous context about the ongoing conversation.",
+        icon="ℹ️",
+    )
 
     # Display chat messages from history on app rerun
     for message in st.session_state.messages:
@@ -89,13 +93,15 @@ def chat_area():
         with st.chat_message("human"):
             st.markdown(question)
 
-        st.session_state.messages.append({"role": "user", "content": question})
+        st.session_state.messages.append({"role": "human", "content": question})
 
         with st.spinner("generating response..."):
             answer = llm.ask_question(question=question)
 
         with st.chat_message("ai"):
             st.markdown(answer)
+
+        st.session_state.messages.append({"role": "ai", "content": answer})
 
 
 st.title("Talensinki GUI")
