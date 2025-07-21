@@ -37,5 +37,11 @@ sudo apt install tesseract-ocr
     - load, split -> unstructured pdf maybe too much: not needed?
     - embeddings -> Ollama + chroma
 
+# Docker workflow
+In order to remove previous versions of docker images that are taking up space:
+`docker image prune --filter label=project=talensinki`
+
 # Preguntas Clara
 - Vas a necesitar buscar en un subconjunto de los archivos? Ejemplo: buscar en todos los archivos creados después de 2010.
+- Firmar acuerdo de que la propiedad intelectual del cacharro (quitando las cosas sensitivas) me pertenece. Hacer una license que no permita el uso comercial!
+
