@@ -118,7 +118,7 @@ def get_item_id_and_metadata_from_database(vector_store: Chroma) -> tuple[list, 
     return docs_ids, docs_metadatas
 
 
-def get_pdf_hashes_in_database(vector_store: Chroma) -> tuple[str]:
+def get_pdf_hashes_in_database(vector_store: Chroma) -> tuple[str, ...]:
     # gets all items from database
     ids, metadatas = get_item_id_and_metadata_from_database(vector_store)
     return tuple(metadata["source_pdf_hash"] for metadata in metadatas)
@@ -132,13 +132,13 @@ def does_pdf_exist_in_database(vector_store: Chroma, pdf_file_hash: str) -> bool
 
 def get_hashes_of_files_in_folder_but_not_in_database(
     hash_to_path_dict: dict, hashes_in_database: tuple
-) -> tuple[str]:
+) -> tuple[str, ...]:
     return tuple(set(hash_to_path_dict.keys()).difference(set(hashes_in_database)))
 
 
 def get_hashes_of_files_in_database_but_not_in_folder(
     hash_to_path_dict: dict, hashes_in_database: tuple
-) -> tuple[str]:
+) -> tuple[str, ...]:
     return tuple(set(hashes_in_database).difference(set(hash_to_path_dict.keys())))
 
 

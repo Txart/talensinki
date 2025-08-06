@@ -34,7 +34,9 @@ def checkhealth() -> None:
 def sync_database() -> None:
     rich_display.print_command_title("Syncing database")
 
-    vector_store = database.init_and_get_vector_store()
+    params = config.Params()
+
+    vector_store = database.init_and_get_vector_store(params=params)
 
     pdf_paths_to_add, entry_ids_to_remove = (
         database.check_sync_status_between_folder_and_database(
@@ -55,6 +57,7 @@ def sync_database() -> None:
             database.add_pdfs_to_database(
                 vector_store=vector_store,
                 pdf_paths=pdf_paths_to_add,
+                params=params,
             )
     else:
         console.print("No new pdf files detected.")
