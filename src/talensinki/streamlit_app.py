@@ -12,14 +12,25 @@ def initialize_session_state() -> None:
         st.session_state.entry_ids_to_remove = []
     if "messages" not in st.session_state:
         st.session_state.messages = []
+    if "params" not in st.session_state:
+        st.session_state.params = config.Params()
 
 
-def database_sync_button(params: config.Params) -> None:
+def set_params(llm_model: str) -> None:
+    params = config.Params(ollama_llm_model=llm_model)
+    st.session_state.params = params
+
+    return None
+
+
+def database_sync_button() -> None:
     if st.button("Check Database Synchronization", type="primary"):
         with st.spinner("Checking synchronization status..."):
             pdf_paths_to_add, entry_ids_to_remove = (
                 database.check_sync_status_between_folder_and_database(
-                    vector_store=database.init_and_get_vector_store(params=params),
+                    vector_store=database.init_and_get_vector_store(
+                        params=st.session_state.params
+                    ),
                     pdf_folder=config.PDF_FOLDER,
                 )
             )
@@ -30,7 +41,7 @@ def database_sync_button(params: config.Params) -> None:
         st.rerun()
 
 
-def sync_database_UI(params: config.Params) -> None:
+def sync_database_UI() -> None:
     if (
         len(st.session_state.pdf_paths_to_add) == 0
         and len(st.session_state.entry_ids_to_remove) == 0
@@ -58,10 +69,10 @@ def sync_database_UI(params: config.Params) -> None:
                     with st.spinner("Embedding PDFs..."):
                         database.add_pdfs_to_database(
                             vector_store=database.init_and_get_vector_store(
-                                params=params
+                                params=st.session_state.params
                             ),
                             pdf_paths=st.session_state.pdf_paths_to_add,
-                            params=params,
+                            params=st.session_state.params,
                         )
                     st.session_state.pdf_paths_to_add = []
                     st.rerun()
@@ -72,7 +83,7 @@ def sync_database_UI(params: config.Params) -> None:
                     with st.spinner("Removing entries..."):
                         database.delete_entries_from_database(
                             vector_store=database.init_and_get_vector_store(
-                                params=params
+                                params=st.session_state.params
                             ),
                             ids=st.session_state.entry_ids_to_remove,
                         )
@@ -80,7 +91,7 @@ def sync_database_UI(params: config.Params) -> None:
                     st.rerun()
 
 
-def chat_area(params: config.Params):
+def chat_area():
     st.title("Chat without memory")
     st.info(
         "No memory is retained between succesive calls to the LLM. Each new question goes in without any previous context about the ongoing conversation.",
@@ -100,8 +111,10 @@ def chat_area(params: config.Params):
 
         st.session_state.messages.append({"role": "human", "content": question})
 
-        with st.spinner(f"generating response with model {params.ollama_llm_model}..."):
-            answer = llm.ask_question(question=question, params=params)
+        with st.spinner(
+            f"generating response with model {st.session_state.params.ollama_llm_model}..."
+        ):
+            answer = llm.ask_question(question=question, params=st.session_state.params)
 
         with st.chat_message("ai"):
             st.markdown(answer)
@@ -109,23 +122,31 @@ def chat_area(params: config.Params):
         st.session_state.messages.append({"role": "ai", "content": answer})
 
 
+def build_sidebar() -> None:
+    with st.form("Sidebar configuration form"):
+        with st.sidebar:
+            llm_model = st.selectbox(
+                label="Select LLM model",
+                options=config.AVAILABLE_LLM_MODELS,
+            )
+            st.form_submit_button(
+                "Set config", on_click=set_params(llm_model=llm_model)
+            )
+
+    return None
+
+
 st.title("Talensinki GUI")
 
-llm_model = st.selectbox(
-    "Select LLM model",
-    ("llama3:latest", "llama3.2:1b"),
-)
-
-params = config.Params(ollama_llm_model=llm_model)
 initialize_session_state()
+build_sidebar()
 
-st.divider()
+tab_db_sync, tab_chat = st.tabs(["Database", "Chat"])
+with tab_db_sync:
+    database_sync_button()
+    if st.session_state.sync_checked:
+        sync_database_UI()
 
-database_sync_button(params=params)
 
-
-if st.session_state.sync_checked:
-    sync_database_UI(params=params)
-
-st.divider()
-chat_area(params)
+with tab_chat:
+    chat_area()
