@@ -21,6 +21,10 @@ def create_chat_object(params: config.Params) -> ChatOllama:
         model=params.ollama_llm_model,
         temperature=0.01,
         num_predict=256,
+        base_url="http://localhost:11434",
+        client_kwargs={
+            "timeout": 20,
+        },
     )
 
 

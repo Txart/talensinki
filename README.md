@@ -1,7 +1,7 @@
 # Installation
 ## Requirements
 - `uv`. Installation instructions [here](https://docs.astral.sh/uv/getting-started/installation/).
-- `ollama`. Installation instructions [here]().
+- `ollama`.
 
 ## Steps
 1. Get the [latest release](https://github.com/Txart/talensinki/releases/latest) from the link or from the Releases page.
