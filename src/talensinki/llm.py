@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import TypedDict
+import requests
 
 from chromadb.api.types import Documents
 from langchain_chroma import Chroma
@@ -14,6 +15,14 @@ class State(TypedDict):
     question: str
     context: list[Document]
     answer: str
+
+
+def check_ollama_connection(base_url="http://localhost:11434") -> None:
+    try:
+        requests.get(f"{base_url}/api/version", timeout=5)
+    except Exception:
+        raise ConnectionError(f"Could not connect to ollama at url {base_url}")
+    return None
 
 
 def create_chat_object(params: config.Params) -> ChatOllama:

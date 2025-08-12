@@ -147,6 +147,7 @@ with tab_db_sync:
     if st.session_state.sync_checked:
         sync_database_UI()
 
+llm.check_ollama_connection()
 
 with tab_chat:
     chat_area()
