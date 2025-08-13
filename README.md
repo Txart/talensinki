@@ -35,14 +35,6 @@ On Windows:
 
 It should work now!
 
-# Deprecated Installation: docker
-## Through the docker container
-`docker compose build`
-
-# Run the docker container
-`docker compose up`
-
-
 # Run the app
 Run the GUI:
 `uv run talensinki-gui`
