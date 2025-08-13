@@ -43,3 +43,6 @@ Run the TUI:
 `uv run talensinki`
 
 
+# Add new LLM models
+The models are installed through ollama (i.e., by running `ollama pull <model name>`. The app then fetches the available ones from there.
+

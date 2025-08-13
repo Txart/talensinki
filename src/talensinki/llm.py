@@ -1,7 +1,6 @@
 from pathlib import Path
 from typing import TypedDict
 
-from chromadb.api.types import Documents
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_ollama import ChatOllama
@@ -22,9 +21,6 @@ def create_chat_object(params: config.Params) -> ChatOllama:
         temperature=0.01,
         num_predict=256,
         base_url="http://localhost:11434",
-        client_kwargs={
-            "timeout": 20,
-        },
     )
 
 

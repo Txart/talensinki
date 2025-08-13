@@ -18,8 +18,11 @@ def initialize_session_state() -> None:
         st.session_state.params = config.Params()
 
 
-def set_params(llm_model: str) -> None:
-    params = config.Params(ollama_llm_model=llm_model)
+def set_params(llm_model: str, embedding_model: str) -> None:
+    params = config.Params(
+        ollama_llm_model=llm_model,
+        ollama_embedding_model=embedding_model,
+    )
     st.session_state.params = params
 
     return None
@@ -229,15 +232,17 @@ def chat_area():
 
 
 def build_sidebar() -> None:
-    with st.form("Sidebar configuration form"):
-        with st.sidebar:
-            llm_model = st.selectbox(
-                label="Select LLM model",
-                options=config.AVAILABLE_LLM_MODELS,
-            )
-            st.form_submit_button(
-                "Set config", on_click=set_params(llm_model=llm_model)
-            )
+    with st.sidebar:
+        llm_model = st.selectbox(
+            label="LLM model",
+            options=config.AVAILABLE_LLM_MODELS,
+        )
+
+        embedding_model = st.selectbox(
+            label="Embedding model",
+            options=config.AVAILABLE_EMBEDDING_MODELS,
+        )
+    set_params(llm_model=llm_model, embedding_model=embedding_model)
 
     return None
 
