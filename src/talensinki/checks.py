@@ -1,13 +1,10 @@
-import typer
-
-from rich.table import Table
+import requests
 
 
 from dataclasses import dataclass
 from pathlib import Path
 
-from talensinki import config, rich_display
-from talensinki.console import console
+from talensinki import config, database
 
 
 @dataclass
@@ -17,58 +14,13 @@ class HealthCheckResult:
     details: str = ""
 
 
-def run_health_checks() -> None:
-    """
-    Run all health checks and display results.
-    """
-    check_results = _run_checks()
-
-    _display_health_checks(check_results=check_results)
-
-
-def _run_checks() -> list[HealthCheckResult]:
+def run_health_checks() -> list[HealthCheckResult]:
     return [
         check_pdf_folder_exists(),
         check_config_file_exists(),
         check_database_connection(),
+        check_ollama_connection(),
     ]
-
-
-def _display_health_checks(check_results: list[HealthCheckResult]) -> None:
-    # Create a table for the results
-    table = Table(show_header=True, header_style="bold magenta")
-    table.add_column("Status", style="", width=8)
-    table.add_column("Check", style="", min_width=20)
-    table.add_column("Details", style="dim", no_wrap=False)
-
-    all_passed = True
-
-    # Display results
-    for result in check_results:
-        if result.passed:
-            status = "[green]✅ PASS[/green]"
-            details = "[dim]OK[/dim]"
-        else:
-            status = "[red]❌ FAIL[/red]"
-            details = (
-                f"[red]{result.details}[/red]"
-                if result.details
-                else "[red]Failed[/red]"
-            )
-            all_passed = False
-
-        table.add_row(status, result.name, details)
-
-    console.print(table)
-
-    # Summary panel
-    if all_passed:
-        rich_display.print_success("All health checks passed!")
-    else:
-        rich_display.print_failure("Some health checks failed!")
-
-    if not all_passed:
-        raise typer.Exit(1)  # Exit with error code
 
 
 # %% Checks
@@ -112,12 +64,23 @@ def check_database_connection() -> HealthCheckResult:
     check_name = "Database connection"
 
     try:
-        # Replace with your actual database connection test
-        # db.connect()
-        # db.execute("SELECT 1")
+        database.init_and_get_vector_store(params=config.Params())
 
-        return HealthCheckResult(passed=False, name=check_name)
+        return HealthCheckResult(passed=True, name=check_name)
     except Exception as e:
         return HealthCheckResult(
             passed=False, name=check_name, details=f"Connection failed: {str(e)}"
         )
+
+
+def check_ollama_connection(base_url="http://localhost:11434") -> HealthCheckResult:
+    check_name = "ollama is connected"
+    try:
+        requests.get(f"{base_url}/api/version", timeout=5)
+    except Exception:
+        return HealthCheckResult(
+            passed=False,
+            name=check_name,
+            details=f"Could not connect to ollama at url {base_url}",
+        )
+    return HealthCheckResult(passed=True, name=check_name)

@@ -1,6 +1,8 @@
 import streamlit as st
+import pandas as pd
 
-from talensinki import database, config, llm
+from talensinki import database, config, llm, checks
+from talensinki.checks import HealthCheckResult
 
 
 def initialize_session_state() -> None:
@@ -21,6 +23,110 @@ def set_params(llm_model: str) -> None:
     st.session_state.params = params
 
     return None
+
+
+def display_health_checks_gui(check_results: list[HealthCheckResult]) -> None:
+    """
+    Display health check results in Streamlit GUI format.
+    """
+
+    # Count passed/failed checks
+    passed_count = sum(1 for result in check_results if result.passed)
+    total_count = len(check_results)
+    failed_count = total_count - passed_count
+
+    # Display summary metrics
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric(label="Total Checks", value=total_count, delta=None)
+
+    with col2:
+        st.metric(
+            label="Passed",
+            value=passed_count,
+        )
+
+    with col3:
+        st.metric(
+            label="Failed",
+            value=failed_count,
+        )
+
+    # Overall status
+    all_passed = passed_count == total_count
+
+    if all_passed:
+        st.success("🎉 All health checks passed!")
+    else:
+        st.error(
+            f"⚠️ {failed_count} health check{'s' if failed_count != 1 else ''} failed!"
+        )
+
+    # Detailed results table
+    st.subheader("📋 Detailed Results")
+
+    # Prepare data for the table
+    table_data = []
+    for result in check_results:
+        status_icon = "✅" if result.passed else "❌"
+        status_text = "PASS" if result.passed else "FAIL"
+        details = (
+            result.details if result.details else ("OK" if result.passed else "Failed")
+        )
+
+        table_data.append(
+            {
+                "Status": f"{status_icon} {status_text}",
+                "Check Name": result.name,
+                "Details": details,
+            }
+        )
+
+    # Create DataFrame and display as table
+    df = pd.DataFrame(table_data)
+
+    # Style the table
+    def style_status(val):
+        if "✅" in val:
+            return "background-color: #d4edda; color: #155724; font-weight: bold;"
+        elif "❌" in val:
+            return "background-color: #f8d7da; color: #721c24; font-weight: bold;"
+        return ""
+
+    def style_details(val):
+        if val == "OK":
+            return "color: #6c757d; font-style: italic;"
+        return ""
+
+    styled_df = df.style.map(style_status, subset=["Status"]).map(
+        style_details, subset=["Details"]
+    )
+
+    st.dataframe(
+        styled_df,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Status": st.column_config.TextColumn(
+                "Status",
+                width="small",
+            ),
+            "Check Name": st.column_config.TextColumn(
+                "Check Name",
+                width="medium",
+            ),
+            "Details": st.column_config.TextColumn(
+                "Details",
+                width="large",
+            ),
+        },
+    )
+
+    # Refresh button
+    st.markdown("---")
+    if st.button("🔄 Run Health Checks Again", type="primary"):
+        st.rerun()
 
 
 def database_sync_button() -> None:
@@ -141,13 +247,14 @@ st.title("Talensinki GUI")
 initialize_session_state()
 build_sidebar()
 
-tab_db_sync, tab_chat = st.tabs(["Database", "Chat"])
-with tab_db_sync:
+tab_checks, tab_db, tab_chat = st.tabs(["Checks", "Database", "Chat"])
+with tab_checks:
+    display_health_checks_gui(check_results=checks.run_health_checks())
+
+with tab_db:
     database_sync_button()
     if st.session_state.sync_checked:
         sync_database_UI()
-
-llm.check_ollama_connection()
 
 with tab_chat:
     chat_area()

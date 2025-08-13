@@ -2,14 +2,14 @@
 
 import typer
 from rich import print
+from rich.table import Table
 
-
-from langchain_core.documents import Document
 
 import time
 
 from talensinki import config, checks, database, rich_display, llm
 from talensinki.console import console
+from talensinki.checks import HealthCheckResult
 
 # initialize typer app
 app = typer.Typer(invoke_without_command=True)
@@ -23,10 +23,48 @@ def info():
     console.print("pdf folder path:", config.PDF_FOLDER)
 
 
+def _display_health_checks(check_results: list[HealthCheckResult]) -> None:
+    # Create a table for the results
+    table = Table(show_header=True, header_style="bold magenta")
+    table.add_column("Status", style="", width=8)
+    table.add_column("Check", style="", min_width=20)
+    table.add_column("Details", style="dim", no_wrap=False)
+
+    all_passed = True
+
+    # Display results
+    for result in check_results:
+        if result.passed:
+            status = "[green]✅ PASS[/green]"
+            details = "[dim]OK[/dim]"
+        else:
+            status = "[red]❌ FAIL[/red]"
+            details = (
+                f"[red]{result.details}[/red]"
+                if result.details
+                else "[red]Failed[/red]"
+            )
+            all_passed = False
+
+        table.add_row(status, result.name, details)
+
+    console.print(table)
+
+    # Summary panel
+    if all_passed:
+        rich_display.print_success("All health checks passed!")
+    else:
+        rich_display.print_failure("Some health checks failed!")
+
+    if not all_passed:
+        raise typer.Exit(1)  # Exit with error code
+
+
 @app.command()
 def checkhealth() -> None:
     rich_display.print_command_title("Health Check Results")
-    checks.run_health_checks()
+    check_results = checks.run_health_checks()
+    _display_health_checks(check_results=check_results)
     return None
 
 
