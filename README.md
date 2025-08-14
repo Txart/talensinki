@@ -36,6 +36,9 @@ On Windows:
 It should work now!
 
 # Run the app
+Before running the app, make sure `ollama` is running in the background. For that, run:
+`ollama serve`
+
 Run the GUI:
 `uv run talensinki-gui`
 
