@@ -19,7 +19,8 @@ def create_chat_object(params: config.Params) -> ChatOllama:
     return ChatOllama(
         model=params.ollama_llm_model,
         temperature=0.01,
-        num_predict=256,
+        num_predict=-1,
+        num_ctx=4096,
         base_url="http://localhost:11434",
     )
 
