@@ -1,27 +1,29 @@
+from pathlib import Path
+from dataclasses import dataclass
+
 from langchain.prompts import PromptTemplate
 
-SYSTEM_PROMPT = PromptTemplate(
-    input_variables=["question", "context"],
-    template="""
-    You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise.
-Question: {question} 
-Context: {context} 
-Answer:
-""",
-)
+
+@dataclass
+class TemplateType:
+    dir: Path
+    input_variables: list[str]
 
 
-REFINE_PROMPT = PromptTemplate(
-    input_variables=["question", "existing_answer", "context"],
-    template="""
-    You have been provided with an existing answer: {existing_answer}
-    You have the opportunity to refine the existing answer with some more context below.
-    
-    Context: {context}
-    
-    Given the new context, refine the original answer to better address the question.
-    If the context isn't useful, return the original answer.
-    
-    Question: {question}
-    Refined Answer:""",
-)
+def get_template_types() -> list[TemplateType]:
+    TEMPLATES_GENERAL_DIR = Path("./prompt_templates")
+
+    # There should be one type per subfolder in {TEMPLATER_GENERAL_DIR}
+    system_template = TemplateType(
+        dir=TEMPLATES_GENERAL_DIR.joinpath("system"),
+        input_variables=["context", "question"],
+    )
+
+    # Register template types
+    return [
+        system_template,
+    ]
+
+
+def get_prompt_template_from_file(filepath: Path) -> PromptTemplate:
+    return PromptTemplate.from_file(template_file=filepath)
