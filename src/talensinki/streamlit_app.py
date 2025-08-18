@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
+import re
 
-from talensinki import database, config, llm, checks
+from talensinki import database, config, llm, checks, templates, utils
 from talensinki.checks import HealthCheckResult
 
 
@@ -200,8 +201,60 @@ def sync_database_UI() -> None:
                     st.rerun()
 
 
+def color_text(text: str, color: str) -> str:
+    return f":{color}[{text}]"
+
+
+def color_variables_in_text(text: str, color: str) -> str:
+    """
+    Display text in Streamlit with words in curly braces emphasized in primary color.
+
+    Args:
+        text (str): Text containing words in {curly braces} to emphasize
+    """
+    # Use Streamlit's built-in colored text syntax
+    # :color[text] automatically uses theme-appropriate colors
+    return re.sub(r"\{([^}]+)\}", rf":{color}[\1]", text)
+
+
+def format_markdown_linebreaks(text: str) -> str:
+    return text.replace("\n", "\n\n")
+
+
 def chat_area():
     st.title("Chat without memory")
+    with st.expander("📜 Prompt"):
+        PROMPT_TYPE = "system"
+        available_prompt_templates = templates.get_all_prompt_templates_by_type()[
+            PROMPT_TYPE
+        ]
+        selected_prompt = st.selectbox(
+            label="Choose prompt",
+            options=available_prompt_templates,
+            format_func=lambda x: x.filename,
+        )
+
+        col_left, col_right = st.columns([0.2, 0.8])
+        with col_left:
+            st.markdown("**variables**")
+            st.markdown(
+                "\n\n".join(
+                    [
+                        color_text(text=input_variable, color="blue")
+                        for input_variable in selected_prompt.prompt.input_variables
+                    ]
+                )
+            )
+        with col_right:
+            st.markdown("**prompt**")
+            st.markdown(
+                format_markdown_linebreaks(
+                    color_variables_in_text(
+                        selected_prompt.prompt.template, color="blue"
+                    )
+                )
+            )
+
     st.info(
         "No memory is retained between succesive calls to the LLM. Each new question goes in without any previous context about the ongoing conversation.",
         icon="ℹ️",

@@ -4,7 +4,7 @@ import requests
 from dataclasses import dataclass
 from pathlib import Path
 
-from talensinki import config, database, templates
+from talensinki import config, database, templates, utils
 
 
 @dataclass
@@ -99,7 +99,7 @@ def _check_prompt_template_has_expected_variables(
     """
     template = templates.get_prompt_template_from_file(filepath=template_filepath)
 
-    return set(template.input_variables) == set(input_variables)
+    return set(template.prompt.input_variables) == set(input_variables)
 
 
 def create_healthcheck_error(
@@ -123,7 +123,9 @@ def check_prompt_templates():
 
     # Perform checks for all registered types
     for template_type in templates.get_template_types():
-        template_filepaths = template_type.dir.glob("*.txt")
+        template_filepaths = templates.get_template_filenames_of_given_type(
+            template_type=template_type
+        )
         for template_filepath in template_filepaths:
             if not _check_prompt_template_has_expected_variables(
                 template_filepath=template_filepath,
