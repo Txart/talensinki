@@ -4,7 +4,7 @@ import requests
 from dataclasses import dataclass
 from pathlib import Path
 
-from talensinki import config, database, templates, utils
+from talensinki import config, database, templates
 
 
 @dataclass

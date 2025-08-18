@@ -6,7 +6,7 @@ from langchain_core.documents import Document
 from langchain_ollama import ChatOllama
 from langgraph.graph import START, StateGraph
 
-from talensinki import templates, config, database
+from talensinki import config, database
 
 
 class State(TypedDict):
@@ -52,7 +52,7 @@ def combine_document_contents(state: State) -> str:
 def generate(state: State, params: config.Params):
     docs_content = combine_document_contents(state)
     llm = create_chat_object(params=params)
-    messages = templates.SYSTEM_PROMPT.invoke(
+    messages = params.prompt.invoke(
         {"question": state["question"], "context": docs_content}
     )
     response = llm.invoke(messages)

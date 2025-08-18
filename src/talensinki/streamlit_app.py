@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import re
 
-from talensinki import database, config, llm, checks, templates, utils
+from talensinki import database, config, llm, checks, templates
 from talensinki.checks import HealthCheckResult
 
 
@@ -17,16 +17,6 @@ def initialize_session_state() -> None:
         st.session_state.messages = []
     if "params" not in st.session_state:
         st.session_state.params = config.Params()
-
-
-def set_params(llm_model: str, embedding_model: str) -> None:
-    params = config.Params(
-        ollama_llm_model=llm_model,
-        ollama_embedding_model=embedding_model,
-    )
-    st.session_state.params = params
-
-    return None
 
 
 def display_health_checks_gui(check_results: list[HealthCheckResult]) -> None:
@@ -233,6 +223,7 @@ def chat_area():
             options=available_prompt_templates,
             format_func=lambda x: x.filename,
         )
+        st.session_state.params.set_params(prompt=selected_prompt.prompt)
 
         col_left, col_right = st.columns([0.2, 0.8])
         with col_left:
@@ -295,7 +286,10 @@ def build_sidebar() -> None:
             label="Embedding model",
             options=config.AVAILABLE_EMBEDDING_MODELS,
         )
-    set_params(llm_model=llm_model, embedding_model=embedding_model)
+
+        st.session_state.params.set_params(
+            ollama_llm_model=llm_model, ollama_embedding_model=embedding_model
+        )
 
     return None
 

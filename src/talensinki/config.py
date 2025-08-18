@@ -1,7 +1,11 @@
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass, fields, field
 import ollama
 from typing import Literal
+
+from langchain.prompts import PromptTemplate
+
+from talensinki import templates
 
 
 # %% Get models from ollama
@@ -61,11 +65,18 @@ VECTOR_DATABASE_FILEPATH = Path("./data/chroma_database")
 VECTOR_DATABASE_COLLECTION_NAME = "PDF_collection"
 
 
+def get_default_prompt() -> PromptTemplate:
+    return templates.get_prompt_template_from_file(
+        filepath=Path("./prompt_templates/system/default_prompt.txt")
+    ).prompt
+
+
 @dataclass()
 class Params:
     ollama_embedding_model: str = "nomic-embed-text:latest"
     pdf_chunking_method: str = "by_sections"
     ollama_llm_model: str = "llama3:latest"
+    prompt: PromptTemplate = field(default_factory=get_default_prompt)
 
     def __post_init__(self):
         if self.ollama_llm_model not in AVAILABLE_LLM_MODELS:
@@ -77,3 +88,29 @@ class Params:
             raise ValueError(
                 f"invalid embedding model chosen. It should be one of {AVAILABLE_EMBEDDING_MODELS}, and you chose {self.ollama_embedding_model}."
             )
+
+    def set_params(self, **kwargs) -> None:
+        """
+        Set one or more parameters in the Params instance.
+
+        Args:
+            **kwargs: Parameter names and their new values
+
+        Example:
+            params.set_params(ollama_llm_model="llama3.1:latest", pdf_chunking_method="by_pages")
+        """
+
+        # Check for invalid parameter names
+        valid_fields = {field.name for field in fields(self)}
+        invalid_params = set(kwargs.keys()) - valid_fields
+        if invalid_params:
+            raise ValueError(
+                f"Invalid parameter names: {invalid_params}. Valid parameters are: {valid_fields}"
+            )
+
+        # Set the parameters
+        for param_name, value in kwargs.items():
+            setattr(self, param_name, value)
+
+        # Re-run validation by calling __post_init__
+        self.__post_init__()
