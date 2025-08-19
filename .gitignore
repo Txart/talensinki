@@ -1,0 +1,25 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+
+# Virtual environments
+.venv
+
+# data folder, but keeping the file structure
+data/databases/*
+data/pdfs/*
+!data/databases/.gitkeep
+!data/pdfs/.gitkeep
+
+# prompt templates
+prompt_templates/*
+
+# Others
+bureaucracy/
+data_back
+
