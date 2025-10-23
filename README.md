@@ -28,6 +28,9 @@ On Windows:
 5. Test installation by openning a Command Prompt and running `tesseract`.
 
 ## Talensinki installation steps
+If you want to update an already version of `Talensinki`, just `git pull` to get the latest updates.
+
+If you are making a fresh install, follow the next steps:
 1. Get the [latest release](https://github.com/Txart/talensinki/releases/latest) from the link or from the Releases page.
 2. Unzip the downloaded folder in the desired location. Navigate to the directory.
 3. Open the command line and run `ollama serve`.

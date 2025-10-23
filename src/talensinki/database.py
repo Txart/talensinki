@@ -8,6 +8,7 @@ from langchain_chroma import Chroma
 from langchain.schema import Document
 import chromadb
 from chromadb.api import ClientAPI
+from chromadb.config import Settings
 from chromadb import Collection
 
 from talensinki import config, pdf_chunking
@@ -31,7 +32,10 @@ def calculate_file_hash(file_path: Path) -> str:
 
 
 def initialize_chroma_database_client() -> ClientAPI:
-    return chromadb.PersistentClient(path=config.VECTOR_DATABASE_FILEPATH)
+    return chromadb.PersistentClient(
+        path=config.VECTOR_DATABASE_FILEPATH,
+        settings=Settings(anonymized_telemetry=False),
+    )
 
 
 def get_or_create_database_collection(chroma_client: ClientAPI) -> Collection:

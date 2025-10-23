@@ -70,10 +70,10 @@ def chunk_pdfs_with_metadata(
 ) -> list[list[Document]]:
     chunks_with_metadata = []
 
-    for pdf_path in track(
-        pdf_paths,
-        description=f"Chunking the PDFs using the {params.pdf_chunking_method} chunking function...",
-    ):
+    for pdf_path in pdf_paths:
+        console.print(
+            f"Chunking the PDF {pdf_path} using the {params.pdf_chunking_method} chunking function..."
+        )
         pdf_file_hash = database.calculate_file_hash(file_path=pdf_path)
         pdf_chunks = AVAILABLE_PDF_CHUNKERS[params.pdf_chunking_method](pdf_path)
         chunks_with_metadata.append(
