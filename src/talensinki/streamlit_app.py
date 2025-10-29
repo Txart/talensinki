@@ -251,27 +251,38 @@ def chat_area():
         icon="ℹ️",
     )
 
-    # Display chat messages from history on app rerun
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+    # Create a container for chat messages, so that the question UI prompt can go always in the bottom.
+    chat_container = st.container()
 
+    # Chat input comes after the container
     question = st.chat_input(placeholder="your question about the pdfs")
 
-    if question:
-        with st.chat_message("human"):
-            st.markdown(question)
+    # Display chat messages from history inside the container
+    with chat_container:
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
 
+    if question:
+        # Append human message and display it
         st.session_state.messages.append({"role": "human", "content": question})
 
-        with st.spinner(
-            f"generating response with model {st.session_state.params.ollama_llm_model}..."
-        ):
-            answer = llm.ask_question(question=question, params=st.session_state.params)
+        with chat_container:
+            with st.chat_message("human"):
+                st.markdown(question)
 
-        with st.chat_message("ai"):
-            st.markdown(answer)
+            # Generate AI response
+            with st.spinner(
+                f"generating response with model {st.session_state.params.ollama_llm_model}..."
+            ):
+                answer = llm.ask_question(
+                    question=question, params=st.session_state.params
+                )
 
+            with st.chat_message("ai"):
+                st.markdown(answer)
+
+        # Append AI message and display it
         st.session_state.messages.append({"role": "ai", "content": answer})
 
 
